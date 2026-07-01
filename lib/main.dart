@@ -209,7 +209,9 @@ LiveCodePatch _parseLiveCode(MotionInspectorItem item, String code) {
   final opacityTernary = RegExp(
     r'opacity:\s*\w+\s*\?\s*(-?\.?\d+(?:\.\d+)?)\s*:\s*(-?\.?\d+(?:\.\d+)?)',
   ).firstMatch(code);
-  final opacityNumber = RegExp(r'opacity:\s*(-?\.?\d+(?:\.\d+)?)').firstMatch(code);
+  final opacityNumber = RegExp(
+    r'opacity:\s*(-?\.?\d+(?:\.\d+)?)',
+  ).firstMatch(code);
   final slideMatch = RegExp(
     r'slideY\(begin:\s*(-?\.?\d+(?:\.\d+)?)',
   ).firstMatch(code);
@@ -224,7 +226,9 @@ LiveCodePatch _parseLiveCode(MotionInspectorItem item, String code) {
       ? (scaleEnd == null ? null : 1.0)
       : double.tryParse(scaleTernary.group(2)!);
   final opacityEnd = opacityTernary == null
-      ? (opacityNumber == null ? null : double.tryParse(opacityNumber.group(1)!))
+      ? (opacityNumber == null
+            ? null
+            : double.tryParse(opacityNumber.group(1)!))
       : double.tryParse(opacityTernary.group(1)!);
   final opacityBegin = opacityTernary == null
       ? (opacityEnd == null ? null : 1.0)
@@ -260,7 +264,9 @@ LiveCodePatch _parseLiveCode(MotionInspectorItem item, String code) {
     code: code,
     text: textMatch?.group(1) ?? _usageTextFromCode(item, code),
     durationMs: durationMs,
-    slideYBegin: slideMatch == null ? null : double.tryParse(slideMatch.group(1)!),
+    slideYBegin: slideMatch == null
+        ? null
+        : double.tryParse(slideMatch.group(1)!),
     scaleX: offsetMatch == null ? null : double.tryParse(offsetMatch.group(1)!),
     scaleY: offsetMatch == null ? null : double.tryParse(offsetMatch.group(2)!),
     width: _parseDoubleProperty(code, 'width'),
@@ -333,7 +339,9 @@ int? _parseDurationMs(String code) {
 }
 
 double? _parseDoubleProperty(String code, String property) {
-  final match = RegExp('$property:\\s*(-?\\.?\\d+(?:\\.\\d+)?)').firstMatch(code);
+  final match = RegExp(
+    '$property:\\s*(-?\\.?\\d+(?:\\.\\d+)?)',
+  ).firstMatch(code);
   return match == null ? null : double.tryParse(match.group(1)!);
 }
 
@@ -2138,13 +2146,17 @@ class _LiveCodeRenderedPreview extends StatelessWidget {
         labelName == 'PageRoute') {
       return _HeroCodePreview(patch: patch);
     }
-    if (labelName == 'CustomPainter' || labelName == 'Canvas' || labelName == 'Paint') {
+    if (labelName == 'CustomPainter' ||
+        labelName == 'Canvas' ||
+        labelName == 'Paint') {
       return _PainterCodePreview(patch: patch);
     }
     if (labelName == 'AnimatedPositioned') {
       return _PositionedCodePreview(patch: patch, duration: duration);
     }
-    if (labelName == 'lottie' || labelName == 'rive' || labelName == 'flutter_animate') {
+    if (labelName == 'lottie' ||
+        labelName == 'rive' ||
+        labelName == 'flutter_animate') {
       return _PackageCodePreview(patch: patch, duration: duration);
     }
     if (labelName == 'ShaderMask') {
@@ -2239,6 +2251,475 @@ class _LiveCodeRenderedPreview extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ContainerCodePreview extends StatelessWidget {
+  const _ContainerCodePreview({required this.patch, required this.duration});
+
+  final LiveCodePatch patch;
+  final Duration duration;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = (patch.width ?? 260).clamp(120, 380).toDouble();
+    final height = (patch.height ?? 160).clamp(90, 260).toDouble();
+    final padding = patch.padding ?? 18;
+    final radius = patch.radius ?? 24;
+    final color = patch.color ?? patch.item.accent.withValues(alpha: 0.22);
+
+    return Center(
+      child: AnimatedContainer(
+        key: ValueKey(patch.code),
+        duration: duration,
+        curve: Curves.easeInOutCubic,
+        width: width,
+        height: height,
+        padding: EdgeInsets.all(padding.clamp(0, 36).toDouble()),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: color == Colors.white ? 0.88 : 0.78),
+          borderRadius: BorderRadius.circular(radius.clamp(0, 60).toDouble()),
+          border: Border.all(color: patch.item.accent.withValues(alpha: 0.52)),
+          boxShadow: [
+            BoxShadow(
+              color: patch.item.accent.withValues(alpha: 0.22),
+              blurRadius: 34,
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              patch.icon ?? patch.item.icon,
+              color: patch.item.accent,
+              size: 44,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              patch.text ?? patch.item.label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'w ${width.toStringAsFixed(0)} · h ${height.toStringAsFixed(0)} · r ${radius.toStringAsFixed(0)}',
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OpacityCodePreview extends StatelessWidget {
+  const _OpacityCodePreview({required this.patch, required this.duration});
+
+  final LiveCodePatch patch;
+  final Duration duration;
+
+  @override
+  Widget build(BuildContext context) {
+    final begin = patch.opacityBegin ?? 0.2;
+    final end = patch.opacityEnd ?? 1;
+    return Center(
+      child: TweenAnimationBuilder<double>(
+        key: ValueKey(patch.code),
+        tween: Tween(begin: begin, end: end),
+        duration: duration,
+        curve: Curves.easeOut,
+        builder: (context, opacity, child) {
+          return Opacity(opacity: opacity.clamp(0, 1), child: child);
+        },
+        child: _LivePreviewCard(
+          patch: patch,
+          title: patch.text ?? patch.item.label,
+          subtitle:
+              'opacity: ${begin.toStringAsFixed(2)} -> ${end.toStringAsFixed(2)}',
+        ),
+      ),
+    );
+  }
+}
+
+class _SwitcherCodePreview extends StatefulWidget {
+  const _SwitcherCodePreview({required this.patch, required this.duration});
+
+  final LiveCodePatch patch;
+  final Duration duration;
+
+  @override
+  State<_SwitcherCodePreview> createState() => _SwitcherCodePreviewState();
+}
+
+class _SwitcherCodePreviewState extends State<_SwitcherCodePreview> {
+  bool alt = false;
+  Timer? timer;
+
+  @override
+  void initState() {
+    super.initState();
+    timer = Timer.periodic(widget.duration, (_) {
+      if (mounted) setState(() => alt = !alt);
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _SwitcherCodePreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.duration != widget.duration) {
+      timer?.cancel();
+      timer = Timer.periodic(widget.duration, (_) {
+        if (mounted) setState(() => alt = !alt);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = widget.patch.text ?? 'Signal Detected';
+    return Center(
+      child: AnimatedSwitcher(
+        duration: widget.duration,
+        transitionBuilder: (child, animation) => ScaleTransition(
+          scale: animation,
+          child: FadeTransition(opacity: animation, child: child),
+        ),
+        child: _LivePreviewCard(
+          key: ValueKey(alt),
+          patch: widget.patch,
+          title: alt ? primary : 'Searching...',
+          subtitle: 'AnimatedSwitcher child changed',
+        ),
+      ),
+    );
+  }
+}
+
+class _TimelineCodePreview extends StatelessWidget {
+  const _TimelineCodePreview({required this.patch, required this.duration});
+
+  final LiveCodePatch patch;
+  final Duration duration;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: TweenAnimationBuilder<double>(
+        key: ValueKey(patch.code),
+        tween: Tween(begin: 0, end: 1),
+        duration: duration,
+        curve: Curves.easeInOut,
+        builder: (context, value, child) {
+          return _LivePreviewCard(
+            patch: patch,
+            title: patch.text ?? patch.item.label,
+            subtitle: 'controller progress ${(value * 100).round()}%',
+            progress: value,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _SlideCodePreview extends StatelessWidget {
+  const _SlideCodePreview({required this.patch, required this.duration});
+
+  final LiveCodePatch patch;
+  final Duration duration;
+
+  @override
+  Widget build(BuildContext context) {
+    final offsetY = patch.scaleY ?? patch.slideYBegin ?? 0.7;
+    return Center(
+      child: TweenAnimationBuilder<double>(
+        key: ValueKey(patch.code),
+        tween: Tween(begin: offsetY, end: 0),
+        duration: duration,
+        curve: Curves.easeOutCubic,
+        builder: (context, y, child) {
+          return Transform.translate(offset: Offset(0, y * 160), child: child);
+        },
+        child: _LivePreviewCard(
+          patch: patch,
+          title: patch.text ?? patch.item.label,
+          subtitle: 'Offset.y ${offsetY.toStringAsFixed(2)} -> 0.00',
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroCodePreview extends StatelessWidget {
+  const _HeroCodePreview({required this.patch});
+
+  final LiveCodePatch patch;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: _LivePreviewCard(
+        patch: patch,
+        title: patch.text ?? 'Hero route preview',
+        subtitle: 'shared tag transition ready',
+        iconSize: 58,
+      ),
+    );
+  }
+}
+
+class _PainterCodePreview extends StatelessWidget {
+  const _PainterCodePreview({required this.patch});
+
+  final LiveCodePatch patch;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: CustomPaint(
+        size: const Size(280, 280),
+        painter: RadarPainter(0.72),
+        child: SizedBox(
+          width: 280,
+          height: 280,
+          child: Center(
+            child: _LivePreviewCard(
+              patch: patch,
+              title: patch.text ?? patch.item.label,
+              subtitle: 'Canvas/Paint live drawing',
+              compact: true,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PositionedCodePreview extends StatelessWidget {
+  const _PositionedCodePreview({required this.patch, required this.duration});
+
+  final LiveCodePatch patch;
+  final Duration duration;
+
+  @override
+  Widget build(BuildContext context) {
+    final left = patch.width ?? 116;
+    return Center(
+      child: SizedBox(
+        width: 360,
+        height: 230,
+        child: Stack(
+          children: [
+            AnimatedPositioned(
+              key: ValueKey(patch.code),
+              duration: duration,
+              curve: Curves.easeOutCubic,
+              left: left.clamp(0, 210).toDouble(),
+              top: 54,
+              child: _Avatar(
+                size: 96,
+                color: patch.item.accent,
+                icon: patch.icon ?? patch.item.icon,
+              ),
+            ),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Text(
+                'left: ${left.toStringAsFixed(0)}',
+                style: const TextStyle(color: Colors.white70),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PackageCodePreview extends StatelessWidget {
+  const _PackageCodePreview({required this.patch, required this.duration});
+
+  final LiveCodePatch patch;
+  final Duration duration;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: TweenAnimationBuilder<double>(
+        key: ValueKey(patch.code),
+        tween: Tween(begin: 0, end: 1),
+        duration: duration,
+        curve: Curves.easeOutBack,
+        builder: (context, value, child) =>
+            Transform.scale(scale: 0.82 + value * 0.18, child: child),
+        child: _LivePreviewCard(
+          patch: patch,
+          title: patch.text ?? patch.item.label,
+          subtitle: 'package asset/state machine preview',
+          iconSize: 58,
+        ),
+      ),
+    );
+  }
+}
+
+class _ShaderCodePreview extends StatelessWidget {
+  const _ShaderCodePreview({required this.patch, required this.duration});
+
+  final LiveCodePatch patch;
+  final Duration duration;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: TweenAnimationBuilder<double>(
+        key: ValueKey(patch.code),
+        tween: Tween(begin: -1, end: 1),
+        duration: duration,
+        curve: Curves.easeInOut,
+        builder: (context, value, child) {
+          return ShaderMask(
+            shaderCallback: (rect) => LinearGradient(
+              colors: const [Colors.white, _amber, Colors.white],
+              stops: [
+                (value - .2).clamp(0, 1).toDouble(),
+                value.clamp(0, 1).toDouble(),
+                (value + .2).clamp(0, 1).toDouble(),
+              ],
+            ).createShader(rect),
+            child: child,
+          );
+        },
+        child: Text(
+          patch.text ?? 'Love Alarm',
+          style: const TextStyle(fontSize: 42, fontWeight: FontWeight.w900),
+        ),
+      ),
+    );
+  }
+}
+
+class _UsageCodePreview extends StatelessWidget {
+  const _UsageCodePreview({required this.patch});
+
+  final LiveCodePatch patch;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: _LivePreviewCard(
+        patch: patch,
+        title: patch.text ?? patch.item.label,
+        subtitle: 'feature scenario is live in this web view',
+      ),
+    );
+  }
+}
+
+class _LivePreviewCard extends StatelessWidget {
+  const _LivePreviewCard({
+    super.key,
+    required this.patch,
+    required this.title,
+    required this.subtitle,
+    this.progress,
+    this.compact = false,
+    this.iconSize = 46,
+  });
+
+  final LiveCodePatch patch;
+  final String title;
+  final String subtitle;
+  final double? progress;
+  final bool compact;
+  final double iconSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: compact ? 220 : 360,
+      padding: EdgeInsets.all(compact ? 16 : 24),
+      decoration: BoxDecoration(
+        color: _panel.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: patch.item.accent.withValues(alpha: 0.46)),
+        boxShadow: [
+          BoxShadow(
+            color: patch.item.accent.withValues(alpha: 0.24),
+            blurRadius: 42,
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: compact ? 74 : 96,
+            height: compact ? 74 : 96,
+            decoration: BoxDecoration(
+              color: patch.item.accent.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: patch.item.accent.withValues(alpha: 0.38),
+              ),
+            ),
+            child: Icon(
+              patch.icon ?? patch.item.icon,
+              color: patch.item.accent,
+              size: iconSize,
+            ),
+          ),
+          SizedBox(height: compact ? 10 : 18),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: compact ? 19 : 27,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white60, fontSize: 14),
+          ),
+          if (progress != null) ...[
+            const SizedBox(height: 14),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(99),
+              child: LinearProgressIndicator(
+                minHeight: 8,
+                value: progress,
+                backgroundColor: Colors.white12,
+                valueColor: AlwaysStoppedAnimation<Color>(patch.item.accent),
+              ),
+            ),
+          ],
+          if (!compact) ...[
+            const SizedBox(height: 18),
+            _LiveCodeMetricRow(
+              durationMs: patch.durationMs,
+              slideYBegin: patch.slideYBegin,
+              scaleX: patch.scaleX,
+              scaleY: patch.scaleY,
+              scaleBegin: patch.scaleBegin,
+              scaleEnd: patch.scaleEnd,
+              accent: patch.item.accent,
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -2344,13 +2825,6 @@ class _LiveCodeMetricRow extends StatelessWidget {
   final double? slideYBegin;
   final double? scaleX;
   final double? scaleY;
-  final double? width;
-  final double? height;
-  final double? radius;
-  final double? padding;
-  final double? opacityBegin;
-  final double? opacityEnd;
-  final Color? color;
   final double? scaleBegin;
   final double? scaleEnd;
   final Color accent;

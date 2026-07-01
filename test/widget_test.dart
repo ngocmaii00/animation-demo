@@ -41,13 +41,14 @@ void main() {
     await tester.pumpWidget(const LoveAlarmMotionLabApp());
     await tester.pump();
 
-    await tester.enterText(find.byType(TextField).first, r'''Text('Live Edited')
-  .animate()
-  .fadeIn(duration: 450.ms)''');
+    await tester.enterText(find.byType(TextField).first, r'''AnimatedBuilder(
+  animation: controller,
+  builder: (context, child) => Text('Live Edited'),
+)''');
     await tester.pump(const Duration(milliseconds: 400));
 
     expect(find.text('Live Edited'), findsWidgets);
-    expect(find.textContaining('duration 450ms'), findsOneWidget);
+    expect(find.textContaining('controller progress'), findsWidgets);
   });
 
   testWidgets(

@@ -4782,3 +4782,30 @@ class _StageGridPainter extends CustomPainter {
   bool shouldRepaint(covariant _StageGridPainter oldDelegate) =>
       oldDelegate.accent != accent;
 }
+
+// import 'package:flutter/material.dart';
+// import 'package:flutter_animate/flutter_animate.dart';
+
+// void main() {
+//   runApp(const MyApp());
+// }
+
+// class MyApp extends StatelessWidget {
+//   const MyApp({super.key});
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return MaterialApp(
+//       home: Scaffold(
+//         appBar: AppBar(title: const Text('Flutter Animate Demo')),
+//         body: Center(
+//           child: Text('Signal Detected')
+//               .animate()
+//               .fadeIn(duration: 10000.ms)
+//               .slideY(begin: 30, end: 0)
+//               .scale(begin: const Offset(10, 100)),
+//         ),
+//       ),
+//     );
+//   }
+// }
